@@ -5,6 +5,12 @@
 [RequireComponent(typeof(Collider2D))]
 public class PickableObject : MonoBehaviour
 {
+    [Header("持ち上げ設定")]
+    [Tooltip("OFFにすると持ち上げ不可になる")]
+    [SerializeField] private bool isPickable = true;
+
+    public bool IsPickable => isPickable;
+
     private Rigidbody2D rb;
 
     private void Awake()

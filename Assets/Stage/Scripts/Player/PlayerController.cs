@@ -54,6 +54,7 @@ public class PlayerController : MonoBehaviour
         {
             PickableObject pickable = hit.GetComponent<PickableObject>();
             if (pickable == null) continue;
+            if (!pickable.IsPickable) continue;
 
             heldObject = pickable;
             heldObject.PickUp(holdPoint);
