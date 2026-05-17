@@ -8,8 +8,8 @@ public class PlayerVisual : MonoBehaviour
     [Header("ビジュアル設定")]
     [SerializeField] private PlayerHealthData healthData;
 
-    [Tooltip("危険度の色を重ねるオーバーレイスプライト")]
-    [SerializeField] private SpriteRenderer visualDanger;
+    [Tooltip("色演出を適用するプレイヤー本体のSpriteRenderer")]
+    [SerializeField] private SpriteRenderer playerRenderer;
 
     private PlayerHealth playerHealth;
     private Coroutine flashCoroutine;
@@ -19,11 +19,9 @@ public class PlayerVisual : MonoBehaviour
     {
         playerHealth = GetComponent<PlayerHealth>();
 
-        // オーバーレイは初期状態で透明にする
-        if (visualDanger != null)
-        {
-            visualDanger.color = Color.clear;
-        }
+        // 初期状態は通常表示
+        if (playerRenderer != null)
+            playerRenderer.color = Color.white;
     }
 
     private void OnEnable()
@@ -45,29 +43,25 @@ public class PlayerVisual : MonoBehaviour
 
         if (ratio > 0.66f)
         {
-            StartBlend(visualDanger.color, Color.clear);
+            StartBlend(playerRenderer.color, Color.white);
             return;
         }
 
         Color dangerColor = healthData.GetDangerColor(currentHp);
-
         Color targetColor = new Color(
             dangerColor.r,
             dangerColor.g,
             dangerColor.b,
-            0.5f
+            1f
         );
-
-        StartBlend(visualDanger.color, targetColor);
+        StartBlend(playerRenderer.color, targetColor);
     }
 
     // ダメージ時の点滅演出を開始する
     private void HandleDamaged()
     {
         if (flashCoroutine != null)
-        {
             StopCoroutine(flashCoroutine);
-        }
 
         flashCoroutine = StartCoroutine(FlashCoroutine());
     }
@@ -75,9 +69,7 @@ public class PlayerVisual : MonoBehaviour
     private void StartBlend(Color from, Color to)
     {
         if (blendCoroutine != null)
-        {
             StopCoroutine(blendCoroutine);
-        }
 
         blendCoroutine = StartCoroutine(BlendCoroutine(from, to));
     }
@@ -86,21 +78,14 @@ public class PlayerVisual : MonoBehaviour
     private IEnumerator FlashCoroutine()
     {
         float elapsed = 0f;
-        Color flashColor = new Color(
-            healthData.DamageFlashColor.r,
-            healthData.DamageFlashColor.g,
-            healthData.DamageFlashColor.b,
-            0.8f
-        );
+        Color flashColor = healthData.DamageFlashColor;
 
         while (elapsed < healthData.FlashDuration)
         {
-            visualDanger.color = flashColor;
+            playerRenderer.color = flashColor;
             yield return new WaitForSeconds(healthData.FlashInterval);
-
-            visualDanger.color = Color.clear;
+            playerRenderer.color = Color.white;
             yield return new WaitForSeconds(healthData.FlashInterval);
-
             elapsed += healthData.FlashInterval * 2f;
         }
 
@@ -108,10 +93,10 @@ public class PlayerVisual : MonoBehaviour
         float ratio = (float)playerHealth.CurrentHp / playerHealth.MaxHp;
         Color dangerColor = healthData.GetDangerColor(playerHealth.CurrentHp);
         Color targetColor = ratio > 0.66f
-            ? Color.clear
-            : new Color(dangerColor.r, dangerColor.g, dangerColor.b, 0.5f);
+            ? Color.white
+            : new Color(dangerColor.r, dangerColor.g, dangerColor.b, 1f);
 
-        StartBlend(visualDanger.color, targetColor);
+        StartBlend(playerRenderer.color, targetColor);
     }
 
     // 指定時間をかけて色をブレンドする
@@ -123,10 +108,10 @@ public class PlayerVisual : MonoBehaviour
         {
             elapsed += Time.deltaTime;
             float t = Mathf.Clamp01(elapsed / healthData.BlendDuration);
-            visualDanger.color = Color.Lerp(from, to, t);
+            playerRenderer.color = Color.Lerp(from, to, t);
             yield return null;
         }
 
-        visualDanger.color = to;
+        playerRenderer.color = to;
     }
 }

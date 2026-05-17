@@ -1,8 +1,8 @@
 ﻿using System.Collections;
 using UnityEngine;
 
-// 浮遊家具の共通処理を定義する基底クラス
-// FloatingObject・HeavyFloatingObject はこのクラスを継承する
+// 浮遊家具の共通処理を定義する基底クラス。
+// FloatingObject・HeavyFloatingObjectはこのクラスを継承する。
 [RequireComponent(typeof(Rigidbody2D))]
 [RequireComponent(typeof(Collider2D))]
 public abstract class BaseFloatingObject : MonoBehaviour
@@ -13,18 +13,16 @@ public abstract class BaseFloatingObject : MonoBehaviour
     [Header("エフェクト")]
     [SerializeField] private FloatingObjectEffect effect;
 
-    [Tooltip("AOE攻撃の対象レイヤー")]
-    [SerializeField] private LayerMask aoeTargetLayer;
+    [Tooltip("着地時に発動するAOEコンポーネント。未設定の場合はAOEなし")]
+    [SerializeField] private AoeEffect aoeEffect;
 
     private Rigidbody2D rb;
-    private Collider2D col;
     private bool isActive = false;
     private bool hasTriggeredAoe = false;
 
     private void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
-        col = GetComponent<Collider2D>();
         OnAwake();
     }
 
@@ -83,44 +81,13 @@ public abstract class BaseFloatingObject : MonoBehaviour
         isActive = false;
 
         effect?.PlayLandEffect();
-        TriggerAoe();
+        aoeEffect?.Trigger();
     }
 
-    // AOEを発動すべき衝突かを判定する
+    // AOEを発動すべき衝突かを判定する。
     // 基底実装は常にtrueを返す。サブクラスで条件を上書きできる
     protected virtual bool ShouldTriggerAoe(Collision2D collision)
     {
         return true;
-    }
-
-    // オブジェクトサイズに基づいてAOE攻撃を発生させる
-    private void TriggerAoe()
-    {
-        float aoeRadius = col.bounds.extents.x * floatingData.AoeRadiusMultiplier;
-
-        Collider2D[] hits = Physics2D.OverlapCircleAll(
-            transform.position,
-            aoeRadius,
-            aoeTargetLayer
-        );
-
-        foreach (Collider2D hit in hits)
-        {
-            PlayerHealth playerHealth = hit.GetComponent<PlayerHealth>();
-            if (playerHealth == null) continue;
-
-            playerHealth.TakeDamage(floatingData.AoeDamage);
-        }
-    }
-
-    // AOE範囲をエディタ上で可視化する
-    private void OnDrawGizmosSelected()
-    {
-        if (col == null) col = GetComponent<Collider2D>();
-        if (floatingData == null) return;
-
-        Gizmos.color = Color.red;
-        float aoeRadius = col.bounds.extents.x * floatingData.AoeRadiusMultiplier;
-        Gizmos.DrawWireSphere(transform.position, aoeRadius);
     }
 }

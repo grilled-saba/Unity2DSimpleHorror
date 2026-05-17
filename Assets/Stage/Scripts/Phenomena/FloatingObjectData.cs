@@ -17,18 +17,7 @@ public class FloatingObjectData : ScriptableObject
     [Range(0.1f, 5f)]
     [SerializeField] private float floatHoldDuration = 1f;
 
-    [Header("AOE設定")]
-    [Tooltip("オブジェクトサイズに対するAOE範囲の倍率")]
-    [Range(0.5f, 5f)]
-    [SerializeField] private float aoeRadiusMultiplier = 2f;
-
-    [Tooltip("AOEのダメージ量")]
-    [Range(1, 100)]
-    [SerializeField] private int aoeDamage = 20;
-
     public float FloatDuration => floatDuration;
     public float FloatHeight => floatHeight;
     public float FloatHoldDuration => floatHoldDuration;
-    public float AoeRadiusMultiplier => aoeRadiusMultiplier;
-    public int AoeDamage => aoeDamage;
 }
