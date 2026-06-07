@@ -128,12 +128,24 @@ public class PlayerController : MonoBehaviour, IInputStateReceiver, IAnimationSt
         }
     }
 
-    // Sキーで足元にオブジェクトを置く
+    // Sキーでオブジェクトを置く。近くに設置先があればそこへ設置する
     private void HandleDrop()
     {
         if (!Input.GetKeyDown(KeyCode.S)) return;
         if (heldObject == null) return;
 
+        // 近くに設置先(PlaceTarget)があれば、そこへの設置を試みる
+        PlaceTarget target = FindNearbyPlaceTarget();
+        if (target != null && target.TryPlace(heldObject.ItemId))
+        {
+            // 設置成功: 設置先の位置に置く
+            heldObject.Drop(target.transform.position);
+            heldObject = null;
+            OnItemDropped?.Invoke();
+            return;
+        }
+
+        // 通常の足元への設置
         Vector2 dropPosition = new Vector2(
             transform.position.x,
             transform.position.y - 1f
@@ -142,5 +154,21 @@ public class PlayerController : MonoBehaviour, IInputStateReceiver, IAnimationSt
         heldObject.Drop(dropPosition);
         heldObject = null;
         OnItemDropped?.Invoke();
+    }
+
+    // 設置範囲内の、まだ埋まっていないPlaceTargetを探す
+    private PlaceTarget FindNearbyPlaceTarget()
+    {
+        Collider2D[] hits = Physics2D.OverlapCircleAll(
+            transform.position,
+            playerData.PickUpRadius
+        );
+
+        foreach (Collider2D hit in hits)
+        {
+            PlaceTarget target = hit.GetComponent<PlaceTarget>();
+            if (target != null && !target.IsFilled) return target;
+        }
+        return null;
     }
 }

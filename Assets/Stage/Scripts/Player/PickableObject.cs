@@ -9,7 +9,12 @@ public class PickableObject : MonoBehaviour
     [Tooltip("OFFにすると持ち上げ不可になる")]
     [SerializeField] private bool isPickable = true;
 
+    [Header("識別")]
+    [Tooltip("設置先(PlaceTarget)との照合に使うアイテム識別子")]
+    [SerializeField] private string itemId;
+
     public bool IsPickable => isPickable;
+    public string ItemId => itemId;
 
     private Rigidbody2D rb;
 

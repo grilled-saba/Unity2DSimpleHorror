@@ -14,9 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LightingData
   baseIntensity: 0.1
   baseColor: {r: 0.04, g: 0.07, b: 0.13, a: 1}
-  flickerMinRatio: 0.4
-  flickerMaxRatio: 1.1
-  flickerIntervalMin: 0.05
-  flickerIntervalMax: 0.25
+  flickerMinRatio: 0.412
+  flickerMaxRatio: 1.28
+  flickerIntervalMin: 0.194
+  flickerIntervalMax: 0.69
   alertColor: {r: 0.9, g: 0.1, b: 0.15, a: 1}
-  transitionDuration: 0.8
+  transitionDuration: 0.1
