@@ -3,13 +3,21 @@ using UnityEngine;
 
 // プレイヤーの移動とオブジェクト操作を管理する
 [RequireComponent(typeof(Rigidbody2D))]
-public class PlayerController : MonoBehaviour, IInputStateReceiver, IAnimationStateNotifier
+public class PlayerController : MonoBehaviour, IInputStateReceiver, IAnimationStateNotifier, IFacingNotifier
 {
     [Header("データ")]
     [SerializeField] private PlayerData playerData;
 
     [Header("アイテムを持つ位置")]
     [SerializeField] private Transform holdPoint;
+
+    [Header("拾い判定")]
+    [Tooltip("前方の拾い判定範囲。範囲内の対象のみ拾える")]
+    [SerializeField] private PickupDetector pickupDetector;
+
+    [Header("カメラ")]
+    [Tooltip("マウス座標をワールド座標へ変換するためのカメラ")]
+    [SerializeField] private Camera mainCamera;
 
     // テスト用のジャンプ機能。本番前にこのフィールドごと削除すること
     [Header("ジャンプ（テスト用）")]
@@ -19,9 +27,10 @@ public class PlayerController : MonoBehaviour, IInputStateReceiver, IAnimationSt
     private Rigidbody2D rb;
     private PickableObject heldObject;
     private InputState inputState = InputState.Normal;
-
     private bool isRunning;
     private bool isJumping;
+    // 現在右を向いているか
+    private bool isFacingRight = true;
 
     // ItemTriggerが購読するアイテム操作イベント
     public event Action<PickableObject> OnItemPickedUp;
@@ -30,6 +39,9 @@ public class PlayerController : MonoBehaviour, IInputStateReceiver, IAnimationSt
     // アニメーション状態の通知イベント
     public event Action<bool> OnRunningChanged;
     public event Action<bool> OnJumpingChanged;
+
+    // 向きの変化を通知するイベント
+    public event Action<bool> OnFacingChanged;
 
     private void Awake()
     {
@@ -40,8 +52,7 @@ public class PlayerController : MonoBehaviour, IInputStateReceiver, IAnimationSt
     {
         if (inputState == InputState.Locked) return;
 
-        HandlePickUp();
-        HandleDrop();
+        HandleInteraction();
 
         // テスト用のジャンプ処理。本番前にこのブロックごと削除すること
         if (Input.GetKeyDown(KeyCode.Space))
@@ -84,8 +95,11 @@ public class PlayerController : MonoBehaviour, IInputStateReceiver, IAnimationSt
         if (inputState == InputState.Inverted) input = -input;
 
         rb.linearVelocity = new Vector2(input * playerData.MoveSpeed, rb.linearVelocity.y);
-
         NotifyRunning(input != 0f);
+
+        // 実際の移動方向に合わせて向きを通知する
+        if (input != 0f)
+            NotifyFacing(input > 0f);
     }
 
     // 走り状態が変化したときのみイベントを発行する
@@ -104,71 +118,58 @@ public class PlayerController : MonoBehaviour, IInputStateReceiver, IAnimationSt
         OnJumpingChanged?.Invoke(isJumping);
     }
 
-    // Wキーで近くのオブジェクトを拾う
-    private void HandlePickUp()
+    // 向きが変化したときのみイベントを発行する
+    private void NotifyFacing(bool value)
     {
-        if (!Input.GetKeyDown(KeyCode.W)) return;
-        if (heldObject != null) return;
-
-        Collider2D[] hits = Physics2D.OverlapCircleAll(
-            transform.position,
-            playerData.PickUpRadius
-        );
-
-        foreach (Collider2D hit in hits)
-        {
-            PickableObject pickable = hit.GetComponent<PickableObject>();
-            if (pickable == null) continue;
-            if (!pickable.IsPickable) continue;
-
-            heldObject = pickable;
-            heldObject.PickUp(holdPoint);
-            OnItemPickedUp?.Invoke(heldObject);
-            break;
-        }
+        if (isFacingRight == value) return;
+        isFacingRight = value;
+        OnFacingChanged?.Invoke(isFacingRight);
     }
 
-    // Sキーでオブジェクトを置く。近くに設置先があればそこへ設置する
-    private void HandleDrop()
+    // マウス左クリックで拾う・置くを切り替える
+    // マウス左クリックで拾う・置くを切り替える
+    private void HandleInteraction()
     {
-        if (!Input.GetKeyDown(KeyCode.S)) return;
-        if (heldObject == null) return;
+        if (!Input.GetMouseButtonDown(0)) return;
 
-        // 近くに設置先(PlaceTarget)があれば、そこへの設置を試みる
-        PlaceTarget target = FindNearbyPlaceTarget();
+        Vector2 worldPoint = mainCamera.ScreenToWorldPoint(Input.mousePosition);
+
+        if (heldObject == null)
+            TryPickUp(worldPoint);
+        else
+            TryDrop(worldPoint);
+    }
+
+    // クリック地点の、範囲内オブジェクトを拾う
+    private void TryPickUp(Vector2 worldPoint)
+    {
+        PickableObject pickable = pickupDetector.GetPickableAtPoint(worldPoint);
+        if (pickable == null) return;
+
+        heldObject = pickable;
+        heldObject.PickUp(holdPoint);
+        OnItemPickedUp?.Invoke(heldObject);
+    }
+
+    // 置く。クリック地点が範囲内のときのみ、その地点へ置く
+    private void TryDrop(Vector2 worldPoint)
+    {
+        // クリック地点が範囲外なら何もしない（保持を維持）
+        if (!pickupDetector.IsPointInRange(worldPoint)) return;
+
+        // クリック地点に設置先があればそこへ設置する
+        PlaceTarget target = pickupDetector.GetPlaceTargetAtPoint(worldPoint);
         if (target != null && target.TryPlace(heldObject.ItemId))
         {
-            // 設置成功: 設置先の位置に置く
             heldObject.Drop(target.transform.position);
             heldObject = null;
             OnItemDropped?.Invoke();
             return;
         }
 
-        // 通常の足元への設置
-        Vector2 dropPosition = new Vector2(
-            transform.position.x,
-            transform.position.y - 1f
-        );
-
-        heldObject.Drop(dropPosition);
+        // クリック地点に置く
+        heldObject.Drop(worldPoint);
         heldObject = null;
         OnItemDropped?.Invoke();
-    }
-
-    // 設置範囲内の、まだ埋まっていないPlaceTargetを探す
-    private PlaceTarget FindNearbyPlaceTarget()
-    {
-        Collider2D[] hits = Physics2D.OverlapCircleAll(
-            transform.position,
-            playerData.PickUpRadius
-        );
-
-        foreach (Collider2D hit in hits)
-        {
-            PlaceTarget target = hit.GetComponent<PlaceTarget>();
-            if (target != null && !target.IsFilled) return target;
-        }
-        return null;
     }
 }
