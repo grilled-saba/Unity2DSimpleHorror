@@ -1,9 +1,10 @@
-﻿using UnityEngine;
+﻿using System.Collections.Generic;
+using UnityEngine;
 
 // 拾えるオブジェクトに付けるコンポーネント
 [RequireComponent(typeof(Rigidbody2D))]
 [RequireComponent(typeof(Collider2D))]
-public class PickableObject : MonoBehaviour
+public class PickableObject : MonoBehaviour, IInteractable
 {
     [Header("持ち上げ設定")]
     [Tooltip("OFFにすると持ち上げ不可になる")]
@@ -17,10 +18,14 @@ public class PickableObject : MonoBehaviour
     public string ItemId => itemId;
 
     private Rigidbody2D rb;
+    private PickUpInteraction pickUpInteraction;
+    // GetAvailableInteractionsで返す使い回しリスト
+    private readonly List<IInteraction> availableInteractions = new List<IInteraction>(1);
 
     private void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
+        pickUpInteraction = new PickUpInteraction(this);
     }
 
     // 拾い上げ処理
@@ -37,5 +42,43 @@ public class PickableObject : MonoBehaviour
         transform.SetParent(null);
         transform.position = position;
         rb.simulated = true;
+    }
+
+    // 設置先に固定する。以降は拾えなくなる
+    public void PlaceAndLock(Vector2 position)
+    {
+        transform.SetParent(null);
+        transform.position = position;
+        rb.simulated = false;
+        isPickable = false;
+    }
+
+    // 持ち上げ可能で、プレイヤーが何も持っていないときのみ「持ち上げ」を返す
+    public IReadOnlyList<IInteraction> GetAvailableInteractions(IItemHolder holder)
+    {
+        availableInteractions.Clear();
+        if (isPickable && holder != null && !holder.IsHolding)
+        {
+            availableInteractions.Add(pickUpInteraction);
+        }
+        return availableInteractions;
+    }
+}
+
+// 「持ち上げ」相互作用
+public class PickUpInteraction : IInteraction
+{
+    private readonly PickableObject target;
+
+    public PickUpInteraction(PickableObject target)
+    {
+        this.target = target;
+    }
+
+    public InteractionType Type => InteractionType.PickUp;
+
+    public void Execute(IItemHolder holder)
+    {
+        holder.Hold(target);
     }
 }
