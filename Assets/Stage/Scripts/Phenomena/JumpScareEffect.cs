@@ -24,7 +24,11 @@ public class JumpScareEffect : MonoBehaviour
 
     private void Awake()
     {
-        if (scareCanvasGroup != null) scareCanvasGroup.alpha = 0f;
+        if (scareCanvasGroup != null)
+        {
+            scareCanvasGroup.alpha = 0f;
+            scareCanvasGroup.blocksRaycasts = false; // 非表示中はレイキャストを通す
+        }
     }
 
     // ジャンプスケアを再生する
@@ -37,9 +41,17 @@ public class JumpScareEffect : MonoBehaviour
 
     private IEnumerator PlayRoutine()
     {
-        if (scareCanvasGroup != null) scareCanvasGroup.alpha = 1f;
+        if (scareCanvasGroup != null)
+        {
+            scareCanvasGroup.alpha = 1f;
+            scareCanvasGroup.blocksRaycasts = true; // 表示中はクリックを遮る
+        }
         yield return new WaitForSeconds(duration);
-        if (scareCanvasGroup != null) scareCanvasGroup.alpha = 0f;
+        if (scareCanvasGroup != null)
+        {
+            scareCanvasGroup.alpha = 0f;
+            scareCanvasGroup.blocksRaycasts = false; // 終了したら通す
+        }
         onFinished.Invoke();
         playCoroutine = null;
     }

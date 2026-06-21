@@ -44,7 +44,11 @@ public class DarkTransitionEffect : MonoBehaviour
         if (inputReceiverObject != null && inputReceiver == null)
             Debug.LogWarning("[DarkTransitionEffect] inputReceiverObjectがIInputStateReceiverを実装していません。");
 
-        if (darkCanvasGroup != null) darkCanvasGroup.alpha = 0f;
+        if (darkCanvasGroup != null)
+        {
+            darkCanvasGroup.alpha = 0f;
+            darkCanvasGroup.blocksRaycasts = false;
+        }
     }
 
     // 暗転を開始する
@@ -58,6 +62,7 @@ public class DarkTransitionEffect : MonoBehaviour
     private IEnumerator TransitionRoutine()
     {
         inputReceiver?.SetInputState(InputState.Locked);
+        if (darkCanvasGroup != null) darkCanvasGroup.blocksRaycasts = true; // 暗転中は遮る
         bool inputUnlocked = false;
 
         // 暗転フェーズ
@@ -96,9 +101,12 @@ public class DarkTransitionEffect : MonoBehaviour
                 if (darkCanvasGroup != null) darkCanvasGroup.alpha = 1f - t;
                 yield return null;
             }
-            if (darkCanvasGroup != null) darkCanvasGroup.alpha = 0f;
+            if (darkCanvasGroup != null)
+            {
+                darkCanvasGroup.alpha = 0f;
+                darkCanvasGroup.blocksRaycasts = false; // 明転して見えなくなったら通す
+            }
         }
-
         routine = null;
     }
 }
