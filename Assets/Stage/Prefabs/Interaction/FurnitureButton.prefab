@@ -98,7 +98,7 @@ MonoBehaviour:
     m_SelectOnDown: {fileID: 0}
     m_SelectOnLeft: {fileID: 0}
     m_SelectOnRight: {fileID: 0}
-  m_Transition: 1
+  m_Transition: 2
   m_Colors:
     m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
     m_HighlightedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
@@ -173,6 +173,8 @@ MonoBehaviour:
     m_PostInfinity: 2
     m_RotationOrder: 4
   button: {fileID: 7128235714685869445}
+  iconImage: {fileID: 7362822001324736667}
+  iconSet: {fileID: 11400000, guid: e6e9e7d2076bca443baf89a7f80a9837, type: 2}
 --- !u!1 &1748075090998563331
 GameObject:
   m_ObjectHideFlags: 0

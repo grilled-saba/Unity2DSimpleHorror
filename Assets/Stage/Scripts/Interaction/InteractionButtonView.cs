@@ -15,6 +15,10 @@ public class InteractionButtonView : MonoBehaviour
     [Header("参照")]
     [Tooltip("クリックを受け取るButton")]
     [SerializeField] private Button button;
+    [Tooltip("種別ごとにスプライトを差し替えるImage（ボタン自身のImageでよい）")]
+    [SerializeField] private Image iconImage;
+    [Tooltip("種別ごとのアイコン定義")]
+    [SerializeField] private InteractionIconSet iconSet;
 
     private CanvasGroup canvasGroup;
     private IInteraction interaction;
@@ -26,11 +30,34 @@ public class InteractionButtonView : MonoBehaviour
     }
 
     // 表示する相互作用と実行主体を結びつける
+    // 表示する相互作用と実行主体を結びつける
     public void Bind(IInteraction interaction, IItemHolder holder)
     {
         this.interaction = interaction;
         this.holder = holder;
         button.onClick.AddListener(OnClicked);
+        ApplyIcon(interaction.Type);
+    }
+
+    // 種別に応じてアイコンを差し替える
+    // 種別に応じて通常時・ホバー時スプライトを差し替える
+    private void ApplyIcon(InteractionType type)
+    {
+        if (iconImage == null || iconSet == null || button == null) return;
+
+        if (iconSet.TryGetSprites(type, out Sprite normal, out Sprite highlighted))
+        {
+            // 通常時はImageのsprite、ホバー時はButtonのSpriteStateで切り替わる
+            iconImage.sprite = normal;
+
+            SpriteState state = button.spriteState;
+            state.highlightedSprite = highlighted;
+            button.spriteState = state;
+        }
+        else
+        {
+            Debug.LogWarning($"[InteractionButtonView] {type}に対応するスプライトがInteractionIconSetに未設定です。");
+        }
     }
 
     // 指定した遅延のあとに出現アニメーションを再生する
