@@ -2,5 +2,6 @@
 public enum InteractionType
 {
     PickUp,
-    Place
+    Place,
+    Use
 }

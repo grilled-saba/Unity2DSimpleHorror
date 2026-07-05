@@ -5,6 +5,7 @@ TagManager:
   serializedVersion: 3
   tags:
   - Ground
+  - Stretchable
   layers:
   - Default
   - TransparentFX

@@ -19,6 +19,7 @@ public abstract class BaseFloatingObject : MonoBehaviour
     private Rigidbody2D rb;
     private bool isActive = false;
     private bool hasTriggeredAoe = false;
+    private bool isHoldingFloat = false;
 
     private void Awake()
     {
@@ -29,11 +30,30 @@ public abstract class BaseFloatingObject : MonoBehaviour
     // サブクラスで追加の初期化が必要な場合にオーバーライドする
     protected virtual void OnAwake() { }
 
-    // 浮遊演出を外部から起動する
+    // 浮遊演出を外部から起動する(上昇→維持→自動落下)
     public void TriggerFloat()
     {
         if (isActive) return;
         StartCoroutine(FloatSequence());
+    }
+
+    // 上昇して浮遊状態を維持する。Restoreが呼ばれるまで降りない
+    // (玄関ドアのようにBOSS勝利後に復旧するオブジェクト用)
+    public void TriggerFloatHold()
+    {
+        if (isActive) return;
+        StartCoroutine(FloatHoldSequence());
+    }
+
+    // 維持中の浮遊を終了し、落下させて通常状態へ戻す
+    public void Restore()
+    {
+        if (!isHoldingFloat) return;
+        isHoldingFloat = false;
+
+        effect?.StopFloatEffect();
+        rb.simulated = true;
+        StartCoroutine(RestoreCooldown());
     }
 
     // 浮遊から落下までの一連の流れ
@@ -45,18 +65,7 @@ public abstract class BaseFloatingObject : MonoBehaviour
         rb.simulated = false;
         effect?.PlayFloatEffect();
 
-        Vector2 startPos = transform.position;
-        Vector2 targetPos = startPos + Vector2.up * floatingData.FloatHeight;
-        float elapsed = 0f;
-
-        // 指定時間をかけて上昇する
-        while (elapsed < floatingData.FloatDuration)
-        {
-            elapsed += Time.deltaTime;
-            float t = Mathf.Clamp01(elapsed / floatingData.FloatDuration);
-            transform.position = Vector2.Lerp(startPos, targetPos, t);
-            yield return null;
-        }
+        yield return RiseRoutine();
 
         // 浮遊状態を一定時間維持する
         yield return new WaitForSeconds(floatingData.FloatHoldDuration);
@@ -67,6 +76,43 @@ public abstract class BaseFloatingObject : MonoBehaviour
         rb.simulated = true;
 
         // 3秒以内に衝突がなければ非アクティブに戻す
+        yield return new WaitForSeconds(3f);
+        isActive = false;
+    }
+
+    // 上昇して維持し続ける流れ(落下はRestoreで行う)
+    private IEnumerator FloatHoldSequence()
+    {
+        isActive = true;
+        hasTriggeredAoe = false;
+
+        rb.simulated = false;
+        effect?.PlayFloatEffect();
+
+        yield return RiseRoutine();
+
+        isHoldingFloat = true;
+    }
+
+    // 指定時間をかけて上昇する共通処理
+    private IEnumerator RiseRoutine()
+    {
+        Vector2 startPos = transform.position;
+        Vector2 targetPos = startPos + Vector2.up * floatingData.FloatHeight;
+        float elapsed = 0f;
+
+        while (elapsed < floatingData.FloatDuration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / floatingData.FloatDuration);
+            transform.position = Vector2.Lerp(startPos, targetPos, t);
+            yield return null;
+        }
+    }
+
+    // 復旧後の衝突判定を少し待ってから非アクティブへ戻す
+    private IEnumerator RestoreCooldown()
+    {
         yield return new WaitForSeconds(3f);
         isActive = false;
     }
