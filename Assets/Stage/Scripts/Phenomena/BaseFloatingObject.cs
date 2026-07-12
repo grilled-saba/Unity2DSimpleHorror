@@ -30,7 +30,8 @@ public abstract class BaseFloatingObject : MonoBehaviour
     // サブクラスで追加の初期化が必要な場合にオーバーライドする
     protected virtual void OnAwake() { }
 
-    // 浮遊演出を外部から起動する(上昇→維持→自動落下)
+    // 浮遊演出を外部から起動する
+    // 通常は上昇→維持→自動落下。データのHoldIndefinitelyがONなら降りずに維持し続ける
     public void TriggerFloat()
     {
         if (isActive) return;
@@ -38,7 +39,7 @@ public abstract class BaseFloatingObject : MonoBehaviour
     }
 
     // 上昇して浮遊状態を維持する。Restoreが呼ばれるまで降りない
-    // (玄関ドアのようにBOSS勝利後に復旧するオブジェクト用)
+    // (データを共有しつつ、この呼び出しだけ維持させたい場合に使う)
     public void TriggerFloatHold()
     {
         if (isActive) return;
@@ -66,6 +67,13 @@ public abstract class BaseFloatingObject : MonoBehaviour
         effect?.PlayFloatEffect();
 
         yield return RiseRoutine();
+
+        // 継続浮遊が指定されている場合は降りずに維持する(復旧はRestoreで行う)
+        if (floatingData.HoldIndefinitely)
+        {
+            isHoldingFloat = true;
+            yield break;
+        }
 
         // 浮遊状態を一定時間維持する
         yield return new WaitForSeconds(floatingData.FloatHoldDuration);

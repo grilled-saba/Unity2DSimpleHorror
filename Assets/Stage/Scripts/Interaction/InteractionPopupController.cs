@@ -53,6 +53,24 @@ public class InteractionPopupController : MonoBehaviour
         Refresh();
     }
 
+    // 表示中のポップアップを対象オブジェクトの現在位置に追従させる。
+    // 位置のみ複製するため、対象が回転してもポップアップは回転しない
+    private void LateUpdate()
+    {
+        foreach (KeyValuePair<IInteractable, InteractionPopup> pair in popups)
+        {
+            if (pair.Key as UnityEngine.Object == null || pair.Value == null) continue;
+            pair.Value.transform.position = GetPopupPosition(pair.Key);
+        }
+    }
+
+    // 対象オブジェクトの位置からポップアップの表示位置を求める
+    private Vector3 GetPopupPosition(IInteractable interactable)
+    {
+        Transform anchor = ((MonoBehaviour)interactable).transform;
+        return anchor.position + (Vector3)offset;
+    }
+
     // 表示すべきポップアップを再計算し、過不足を反映する
     private void Refresh()
     {
@@ -90,9 +108,7 @@ public class InteractionPopupController : MonoBehaviour
 
             InteractionPopup popup = Instantiate(popupPrefab);
             popup.transform.SetParent(popupCanvas, false);
-
-            Transform anchor = ((MonoBehaviour)interactable).transform;
-            popup.transform.position = anchor.position + (Vector3)offset;
+            popup.transform.position = GetPopupPosition(interactable);
 
             popup.Show(interactable.GetAvailableInteractions(player), player);
             popups.Add(interactable, popup);

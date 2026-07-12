@@ -17,7 +17,11 @@ public class FloatingObjectData : ScriptableObject
     [Range(0.1f, 5f)]
     [SerializeField] private float floatHoldDuration = 1f;
 
+    [Tooltip("ONにすると維持時間を無視して浮遊し続ける(Restoreが呼ばれるまで降りない)")]
+    [SerializeField] private bool holdIndefinitely = false;
+
     public float FloatDuration => floatDuration;
     public float FloatHeight => floatHeight;
     public float FloatHoldDuration => floatHoldDuration;
+    public bool HoldIndefinitely => holdIndefinitely;
 }
