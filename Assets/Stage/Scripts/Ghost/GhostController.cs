@@ -23,6 +23,7 @@ public class GhostController : MonoBehaviour
 
     private SpriteRenderer spriteRenderer;
     private Coroutine sequenceCoroutine;
+    private GhostTargetObject currentTarget;
     private bool approachReceived;
 
     private void Awake()
@@ -36,6 +37,7 @@ public class GhostController : MonoBehaviour
     {
         if (IsBusy || target == null) return;
         IsBusy = true;
+        currentTarget = target;
         sequenceCoroutine = StartCoroutine(GhostSequence(target));
     }
 
@@ -45,13 +47,20 @@ public class GhostController : MonoBehaviour
         if (spawnPoint != null) transform.position = spawnPoint.position;
         yield return FadeTo(1f, ghostData.AppearDuration);
 
-        // 対象へ移動
-        while (Vector2.Distance(transform.position, target.EntryPosition) > ghostData.ArriveDistance)
+        // 対象へ移動(対象が途中で消えた場合は中断)
+        while (target != null &&
+               Vector2.Distance(transform.position, target.EntryPosition) > ghostData.ArriveDistance)
         {
             transform.position = Vector2.MoveTowards(
                 transform.position, target.EntryPosition,
                 ghostData.MoveSpeed * Time.deltaTime);
             yield return null;
+        }
+
+        if (target == null)
+        {
+            yield return AbortSequence();
+            yield break;
         }
 
         // 侵入(姿を消す)して異常演出を開始
@@ -64,8 +73,14 @@ public class GhostController : MonoBehaviour
         // 潜伏後、床を踏む通知を待つ(潜伏中の通知は受け付けない)
         approachReceived = false;
         target.OnPlayerApproached += HandlePlayerApproached;
-        yield return new WaitUntil(() => approachReceived);
-        target.OnPlayerApproached -= HandlePlayerApproached;
+        yield return new WaitUntil(() => approachReceived || target == null);
+        if (target != null) target.OnPlayerApproached -= HandlePlayerApproached;
+
+        if (target == null)
+        {
+            yield return AbortSequence();
+            yield break;
+        }
 
         // ジャンプスケアと破損
         target.NotifyJumpScare();
@@ -77,14 +92,47 @@ public class GhostController : MonoBehaviour
         yield return new WaitForSeconds(ghostData.ExitVisibleDuration);
         yield return FadeTo(0f, ghostData.EnterDuration);
 
+        FinishSequence(target);
+    }
+
+    // 対象消失などで流れを中断し、非表示に戻す
+    private IEnumerator AbortSequence()
+    {
+        yield return FadeTo(0f, ghostData.EnterDuration);
+        FinishSequence(null);
+    }
+
+    // 一連の流れを終了し、マネージャへ通知する
+    private void FinishSequence(GhostTargetObject completedTarget)
+    {
         IsBusy = false;
+        currentTarget = null;
         sequenceCoroutine = null;
-        OnTargetCompleted?.Invoke(target);
+        if (completedTarget != null) OnTargetCompleted?.Invoke(completedTarget);
     }
 
     private void HandlePlayerApproached()
     {
         approachReceived = true;
+    }
+
+    // 再生途中で無効化された場合の保険。購読と状態を確実に戻す
+    private void OnDisable()
+    {
+        if (sequenceCoroutine != null)
+        {
+            StopCoroutine(sequenceCoroutine);
+            sequenceCoroutine = null;
+        }
+
+        if (currentTarget != null)
+        {
+            currentTarget.OnPlayerApproached -= HandlePlayerApproached;
+            currentTarget = null;
+        }
+
+        IsBusy = false;
+        SetAlpha(0f);
     }
 
     private IEnumerator FadeTo(float targetAlpha, float duration)

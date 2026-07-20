@@ -12,8 +12,8 @@ public class GhostTargetObject : MonoBehaviour
     [Tooltip("ゴーストが侵入する位置。未指定なら自身の位置を使う")]
     [SerializeField] private Transform entryPoint;
 
-    [Tooltip("前提となる対象。指定した場合、その対象が発動済みになるまでActivateを受け付けない(連鎖 19→20, 21→22 用)")]
-    [SerializeField] private GhostTargetObject prerequisite;
+    [Tooltip("前提となる発動フラグ。指定した場合、そのフラグが立つまでActivateを受け付けない(連鎖 19→20, 21→22 用)")]
+    [SerializeField] private ActivationFlag prerequisiteFlag;
 
     [Header("演出イベント")]
     [Tooltip("ゴーストが侵入し異常演出を開始するとき発火")]
@@ -40,8 +40,8 @@ public class GhostTargetObject : MonoBehaviour
     {
         if (IsActivated || IsCompleted) return;
 
-        // 前提対象が未発動なら受け付けない
-        if (prerequisite != null && !prerequisite.IsActivated) return;
+        // 前提フラグが立っていなければ受け付けない
+        if (prerequisiteFlag != null && !prerequisiteFlag.IsActivated) return;
 
         IsActivated = true;
         OnActivated?.Invoke(this);

@@ -19,6 +19,20 @@ public class GhostSequenceManager : MonoBehaviour
 
     private readonly Queue<GhostTargetObject> pendingTargets = new Queue<GhostTargetObject>();
     private int completedCount;
+    private int totalTargets;
+
+    private void Awake()
+    {
+        // 空のスロットを除いた実数を数える
+        totalTargets = 0;
+        foreach (var target in targets)
+        {
+            if (target != null) totalTargets++;
+        }
+
+        if (totalTargets == 0)
+            Debug.LogWarning("[GhostSequenceManager] 侵入対象が設定されていません。");
+    }
 
     private void OnEnable()
     {
@@ -50,7 +64,7 @@ public class GhostSequenceManager : MonoBehaviour
     {
         completedCount++;
 
-        if (completedCount >= targets.Length)
+        if (completedCount >= totalTargets)
         {
             onAllTargetsCompleted.Invoke();
             return;
